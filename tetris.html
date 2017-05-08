@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title> V 0.5 </title>
+
+</head>
+
+
+<body onload="startGame()">
+
+<script>
+canvas = document.getElementById('canvas');
+
+// Need to do:
+// Rotation BUG: may exceed boundary.
+// Need to set a maximum height. 
+
+const width = 800;
+const height = 800;
+const BLOCK_SIZE = 50;
+const MAXIMUM = 800;
+var time_counter = 0;
+var tip_point = 800;
+var game;
+
+///// Provide the player a 2D array, so every time we can push in the shape into the array
+// Rotations will be around the pivot point of the shape.
+///// The object should also be a 2D array.
+
+
+
+function startGame() {
+    game = new myGameArea();
+	game.start();
+}
+
+function clear_row(){
+
+	var row;
+	var c = 0;
+
+	for(j = 0; j <=  17; j++){
+		
+		c = 0;	
+		row = j * 50;
+		
+		for(i = 0; i < game.objects.length; i++){
+			if(game.objects[i].getY() == row){
+				c ++;
+			}
+		}
+		
+		if(c >= 16){
+			for(j= game.objects.length - 1; j >= 0 ; j--){
+				if(game.objects[j].getY() == row)
+					game.objects.splice(j,1);
+					
+			}
+
+			for(k = 0; k <= game.objects.length; k++){
+				if(game.objects[k].getY() < row){
+					this.tempY = game.objects[k].getY();
+					game.objects[k].setY(this.tempY + BLOCK_SIZE);
+				}
+			}
+		}
+	}
+}
+
+this.refresh = function(){
+
+	if(time_counter == 4){
+		game.player.velY = 1;
+		time_counter = 0;
+		}
+	else{
+		time_counter ++;
+		game.player.velY = 0;}
+	
+		clear_row();
+
+	//Clear out the rectangle in the frame from bottom to the right bottom most;
+	game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
+			
+	// Draw the vertical lines
+	for(i = 1; i <= 16; i++){
+
+		game.ctx.beginPath();
+		game.ctx.moveTo(i * BLOCK_SIZE, 0);
+		game.ctx.lineTo(i * BLOCK_SIZE, height);
+		game.ctx.lineWidth = "0.5";
+		game.ctx.stroke();
+
+	}
+	
+	// Draw the horizontal lines
+	for(i = 1; i <= 16; i++){
+
+		game.ctx.beginPath();
+		game.ctx.moveTo(0, i * BLOCK_SIZE);
+		game.ctx.lineTo(width , i * BLOCK_SIZE);
+		game.ctx.lineWidth = "0.5";
+		game.ctx.stroke();
+
+	}
+	
+	// Operate the tick
+	game.player.tick();
+	
+	// Still Unclear
+	for(i= 0; i < game.objects.length; i++){
+		break;
+	}
+	
+	var check = collision(game.objects, game.player);
+
+	for(i = 0; i < game.player.combination.length; i ++){
+		if(game.player.combination[i].getY() == 750 || check){
+			for(j = 0; j < game.player.combination.length; j ++){
+				game.objects.push(game.player.combination[j]);
+			}
+			game.player = new Tile(width / 2, 0, game.ctx);
+			break;
+		}
+	}
+	
+	// Render the player's movement;
+	game.player.render();
+	
+	// Render through every single object inside the Object 
+	for(i= 0; i < game.objects.length; i++){
+		game.objects[i].render();
+	}
+};
+	
+function switch_object(){
+// When the player hits the base it will stop for now.  (750 is left to define)
+		this.numbers = [];
+		this.smallest = 800;
+		var shortest_distance = [800];
+		var final_pos;
+		var difference;
+		
+		for(i = 0; i < game.player.combination.length; i ++){
+			this.numbers.push(game.player.combination[i].getY());
+		}
+	
+		this.numbers.sort(function(a, b) {
+			return a - b;
+			});
+	
+		
+		for(j = 0; j < game.player.combination.length; j++){
+		//	console.log(game.objects[i].getX());
+			//			console.log(game.objects[i].getY());
+						
+				//								console.log(game.player.combination[i].getY());
+
+			for(i = 0; i < game.objects.length; i++){
+					//	console.log(game.player.combination[j].getY());
+
+			difference = game.objects[i].getY() - game.player.combination[j].getY();
+			
+			if(game.objects[i].getX() == game.player.combination[j].getX() && this.smallest > difference)
+							this.smallest = difference;
+							
+				}
+			shortest_distance.push(this.smallest);
+			}
+		
+		shortest_distance.sort(function(a, b){
+			return a - b;
+		});
+		
+		this.smallest = 0;
+	
+		for(a = 0; a < game.player.combination.length; a++){
+			if (this.smallest < game.player.combination[a].getY())
+				this.smallest = game.player.combination[a].getY();
+		}
+	
+		if(shortest_distance[0] == 800)
+			final_pos = 750 - this.smallest
+		else final_pos = shortest_distance[0] - BLOCK_SIZE;
+			
+		for(i = 0; i < game.player.combination.length; i ++){
+			game.player.combination[i].setY(game.player.combination[i].getY() + final_pos);
+			game.objects.push(game.player.combination[i]);
+		}
+		
+		game.player = new Tile(400, 0,game.ctx);
+}
+	
+function myGameArea(){
+    this.canvas = document.createElement("canvas");
+	this.ctx = this.canvas.getContext("2d");
+	
+	// Initialize the control object of the player;
+	this.player = new Tile(400, 0, this.ctx);
+	
+	// Initialize the Object array (blank);
+	this.objects = [];
+	
+	
+    this.start = function() {
+        
+		// Set the frame size of the canvas;
+		this.canvas.width = width;
+        this.canvas.height = height;
+		
+		// Locates the position of the canvas;
+		this.canvas.setAttribute('style', "position: absolute;  left: 50%; margin-left:-700px; top: 50%; margin-top:-400px; background-color: white; border:2px solid black");
+	   
+	    // Place the canvas at the top
+	    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+		
+		// Run the refresh function every 100 ms;
+		this.interval = setInterval(refresh, 100);
+    };
+}
+
+function Blocks(){
+	
+	this.setX = function(x){
+		this.x = x;
+	}
+	
+	this.setY = function(y){
+		this.y = y;
+	}
+	
+	this.getX = function(){
+		return this.x;
+	}
+	
+	this.getY = function(){
+		return this.y;
+	}
+	
+	this.setColor = function(color){
+		this.color = color;
+	}
+	
+	this.getColor = function(){
+		return this.color;
+	}
+	
+	this.setCtx = function(ctx){
+		this.ctx = ctx;
+	}
+	
+	// This will 
+	this.render = function(){
+	
+	this.ctx.lineWidth = "3";
+		this.ctx.fillStyle = this.color;
+		this.ctx.fillRect(this.x, this.y, BLOCK_SIZE, BLOCK_SIZE);
+		this.ctx.strokeRect(this.x, this.y, BLOCK_SIZE, BLOCK_SIZE);
+		
+	}
+
+}
+
+// The Tile controls the tick and render for the game
+function Tile(x, y, ctx){
+	this.x = x;
+	this.y = y;
+	this.ctx = ctx;
+	this.velX = 0;
+	this.velY = 0;
+	this.ID;
+	this.initialization = true;
+	this.block_size = BLOCK_SIZE;
+	this.random_number = Math.floor(Math.random() * 7) + 1;
+	
+	this.block1 = new Blocks();
+	this.block2 = new Blocks();
+	this.block3 = new Blocks();
+	this.block4 = new Blocks();
+	
+	this.combination = [this.block1, this.block2, this.block3, this.block4];
+	// The render function (Draws the Game objects of the canvas)
+	
+	this.render = function(){
+		
+		if(this.initialization)
+		  //{"T","l","L","O","Z"};
+		// Determine the block to be displayed next
+		switch(this.random_number){
+		
+		case 1://L-Shape
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("red");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x - this.block_size);
+		this.block2.setY(this.y + this.block_size);
+		this.block2.setColor("red");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x);
+		this.block3.setY(this.y - this.block_size);
+		this.block3.setColor("red");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x);
+		this.block4.setY(this.y + this.block_size);
+		this.block4.setColor("red");
+		this.block4.setCtx(ctx);
+		  
+		this.ID = "L";
+		  
+		this.initialization = false;
+		  break;
+		  
+		case 2://Z-Shape(1)
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("blue");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x);
+		this.block2.setY(this.y - this.block_size);
+		this.block2.setColor("blue");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x - this.block_size);
+		this.block3.setY(this.y);
+		this.block3.setColor("blue");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x + this.block_size);
+		this.block4.setY(this.y - this.block_size);
+		this.block4.setColor("blue");
+		this.block4.setCtx(ctx);
+		
+		this.ID = "Z1"
+		 
+		this.initialization = false;
+		  break;
+		  
+		case 3://Straight Line
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("purple");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x);
+		this.block2.setY(this.y - this.block_size);
+		this.block2.setColor("purple");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x);
+		this.block3.setY(this.y - 2 * this.block_size);
+		this.block3.setColor("purple");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x);
+		this.block4.setY(this.y + this.block_size);
+		this.block4.setColor("purple");
+		this.block4.setCtx(ctx);
+		
+		this.ID = "I";
+		
+		this.initialization = false;  
+		  break;
+		  
+		case 4://Square
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("yellow");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x);
+		this.block2.setY(this.y - this.block_size);
+		this.block2.setColor("yellow");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x + this.block_size);
+		this.block3.setY(this.y);
+		this.block3.setColor("yellow");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x + this.block_size);
+		this.block4.setY(this.y - this.block_size);
+		this.block4.setColor("yellow");
+		this.block4.setCtx(ctx);
+		
+		this.ID = "O";
+		
+		this.initialization = false;
+		  break;
+		  
+		case 5://T-shape
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("grey");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x - this.block_size);
+		this.block2.setY(this.y);
+		this.block2.setColor("grey");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x);
+		this.block3.setY(this.y - this.block_size);
+		this.block3.setColor("grey");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x + this.block_size);
+		this.block4.setY(this.y);
+		this.block4.setColor("grey");
+		this.block4.setCtx(ctx);
+		
+		this.ID = "T";
+		
+		this.initialization = false;
+		  break;
+		  
+		case 6://Z-Shape(2)
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("orange");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x);
+		this.block2.setY(this.y - this.block_size);
+		this.block2.setColor("orange");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x - this.block_size);
+		this.block3.setY(this.y - this.block_size);
+		this.block3.setColor("orange");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x + this.block_size);
+		this.block4.setY(this.y);
+		this.block4.setColor("orange");
+		this.block4.setCtx(ctx);
+		 
+		this.ID = "Z2";
+		 
+		this.initialization = false;
+		  break;
+		  
+		case 7://L-Shape(2)
+		
+		this.block1.setX(this.x);
+		this.block1.setY(this.y);
+		this.block1.setColor("green");
+		this.block1.setCtx(ctx);
+		
+		this.block2.setX(this.x + this.block_size);
+		this.block2.setY(this.y + this.block_size);
+		this.block2.setColor("green");
+		this.block2.setCtx(ctx);
+		
+		this.block3.setX(this.x);
+		this.block3.setY(this.y - this.block_size);
+		this.block3.setColor("green");
+		this.block3.setCtx(ctx);
+		
+		this.block4.setX(this.x);
+		this.block4.setY(this.y + this.block_size);
+		this.block4.setColor("green");
+		this.block4.setCtx(ctx);
+		  
+		this.ID = "L2";
+		  
+		this.initialization = false;
+		  break;  
+		} else {
+			for(i = 0; i < this.combination.length; i ++){
+				this.combination[i].setX(this.combination[i].getX());
+				this.combination[i].setY(this.combination[i].getY());
+			}
+		}
+		for(i = 0; i < this.combination.length; i ++){
+			this.combination[i].render();
+		}
+		
+	}
+	
+	// Tick determines the inner mechanics of the project
+	this.tick = function(){
+
+		this.numbers = [];
+		
+		
+		for(i = 0; i < game.player.combination.length; i ++)
+			this.numbers.push(game.player.combination[i].getX());
+		
+		this.numbers.sort(function(a, b) {
+			return a - b;
+			});
+	
+		this.largest = this.numbers[this.numbers.length - 1];
+		this.smallest = this.numbers[0];
+		
+		// Control the velx
+		if(this.smallest + this.velX * this.block_size >= 0)
+			if(this.largest + this.velX * this.block_size < 800){
+			
+				for(i = 0; i < this.combination.length; i++){
+					
+					this.combination[i].setX(this.combination[i].getX() + this.velX * this.block_size);
+				
+				}
+				
+				this.x += this.velX * this.block_size;
+		}
+		
+		this.velX = 0;
+		
+		// This Y will always fall
+		for(i = 0; i < this.combination.length; i ++){
+			this.combination[i].setY(this.combination[i].getY() + this.velY * this.block_size);
+		}
+		
+		this.y += this.velY * this.block_size;
+
+	}	
+}
+
+// The keyboard controling the velocity of the block
+window.document.onkeydown = function disableRefresh(evt){
+		evt = (evt) ? evt : window.event;
+
+		var ieKey = evt.keyCode;
+		var realkey = String.fromCharCode(ieKey);
+
+		switch(realkey){
+		case "W":
+			rotation();
+			break;
+		case "S": //(can move to the ground immediately)
+			switch_object();
+			break;
+		case "A":
+			game.player.velX = -1;
+			checkSides(-1);
+			break;
+		case "D":
+			game.player.velX = 1;	
+			checkSides(1);
+			break;
+		default:
+			break;
+	}
+}
+
+// press w will rotate clockwise
+// press a will move left
+// press d will move right
+// press s will move down immediately
+function checkSides(dirx){
+		
+	for(i = 0; i < game.objects.length; i++){
+		for(j = 0; j < game.player.combination.length; j++){
+			if(game.objects[i].getX() == game.player.combination[j].getX() + dirx * BLOCK_SIZE){
+			   if(game.objects[i].getY() == game.player.combination[j].getY()){
+				game.player.velX = 0;
+				break;
+				}
+			}
+		}
+	}
+}
+
+function rotation(){
+	
+	if(game.player.ID != "O"){
+	
+		if(game.player.ID == "I"){
+			
+			this.checkX = game.player.combination[0].getX();
+			this.checkX2 = game.player.combination[3].getX();
+			this.centerX = checkX;
+			this.centerY = game.player.combination[0].getY();
+			this.isStraight;
+					
+				if(this.checkX == this.checkX2)
+					this.isStraight = true;
+				else this.isStraight = false;
+			
+			if(this.isStraight){
+				
+			game.player.block1.setX(this.centerX);
+			game.player.block1.setY(this.centerY);
+			
+			game.player.block2.setX(this.centerX + 50);
+			game.player.block2.setY(this.centerY);
+			
+			game.player.block3.setX(this.centerX - 50);
+			game.player.block3.setY(this.centerY);
+			
+			game.player.block4.setX(this.centerX - 100);
+			game.player.block4.setY(this.centerY);
+			
+			} else {
+			
+			game.player.block1.setX(this.centerX);
+			game.player.block1.setY(this.centerY);
+		
+			game.player.block2.setX(this.centerX);
+			game.player.block2.setY(this.centerY - 50);
+		
+			game.player.block3.setX(this.centerX);
+			game.player.block3.setY(this.centerY - 100);
+		
+			game.player.block4.setX(this.centerX);
+			game.player.block4.setY(this.centerY + 50);
+			
+			}
+	
+		} else {
+			
+			centerX = game.player.x;
+			centerY = game.player.y;
+			this.tempx;
+			this.tempy;
+	
+			for(i = 0; i < game.player.combination.length; i ++){
+			
+				this.tempx = game.player.combination[i].getX();
+				this.tempy = game.player.combination[i].getY();
+	
+			for(j = 0; j < game.player.combination.length; j++){
+
+				game.player.combination[i].setX(centerX + this.tempy - centerY);
+				game.player.combination[i].setY(centerY - this.tempx + centerX);	
+				
+			}
+		}
+	}
+	}
+}
+
+function collision(objects, player){
+
+	var check = false;
+
+	// If the next 
+	for(i= 0; i < objects.length; i++){
+		for(b = 0; b < game.player.combination.length; b ++){
+			if(player.combination[b].getY() + 50 == objects[i].getY() &&
+			player.combination[b].getX() == objects[i].getX()){
+				check = true;
+				break;
+				}
+		}
+	}
+	
+	return check;
+}
+
+</script>
+
+</body>
+</html>
